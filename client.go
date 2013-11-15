@@ -1,7 +1,6 @@
 package kestrel
 
 import (
-	"./kthrift"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"time"
 )
@@ -15,7 +14,7 @@ type Client struct {
 	serverIndex                   int
 	operationsSentToCurrentServer int
 
-	tclient    *kthrift.KestrelClient
+	tclient    *KestrelClient
 	ttransport *thrift.TFramedTransport
 }
 
@@ -31,7 +30,7 @@ func NewClient(servers ...string) *Client {
 	}
 }
 
-func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) (items []*kthrift.Item, err error) {
+func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) (items []*Item, err error) {
 	for i := 0; i <= c.Retries; i++ {
 		items, err = c.get(queueName, maxItems, timeout, autoAbort)
 		if err == nil {
@@ -42,7 +41,7 @@ func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, au
 	return
 }
 
-func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*kthrift.Item, error) {
+func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*Item, error) {
 	err := c.connectToNextServerIfNeeded()
 	if err != nil {
 		return nil, err
@@ -73,7 +72,7 @@ func (c *Client) put(queueName string, items [][]byte) (int32, error) {
 	return c.tclient.Put(queueName, items, 0)
 }
 
-func (c *Client) Confirm(queueName string, items []*kthrift.Item) (int32, error) {
+func (c *Client) Confirm(queueName string, items []*Item) (int32, error) {
 	ids := make(map[int64]bool, len(items))
 	for _, item := range items {
 		ids[item.Id] = true
@@ -82,7 +81,7 @@ func (c *Client) Confirm(queueName string, items []*kthrift.Item) (int32, error)
 	return c.tclient.Confirm(queueName, ids)
 }
 
-func (c *Client) Abort(queueName string, items []*kthrift.Item) (int32, error) {
+func (c *Client) Abort(queueName string, items []*Item) (int32, error) {
 	ids := make(map[int64]bool, len(items))
 	for _, item := range items {
 		ids[item.Id] = true
@@ -116,7 +115,7 @@ func (c *Client) connectToNextServer() error {
 		err = transport.Open()
 		if err == nil {
 			c.ttransport = thrift.NewTFramedTransport(transport)
-			c.tclient = kthrift.NewKestrelClientFactory(c.ttransport, thrift.NewTBinaryProtocolFactoryDefault())
+			c.tclient = NewKestrelClientFactory(c.ttransport, thrift.NewTBinaryProtocolFactoryDefault())
 			c.operationsSentToCurrentServer = 0
 			return nil
 		} else {

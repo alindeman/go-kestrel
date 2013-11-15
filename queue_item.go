@@ -1,5 +1,9 @@
 package kestrel
 
+import (
+	"fmt"
+)
+
 type QueueItem struct {
 	*Item
 
@@ -21,11 +25,23 @@ func NewQueueItems(items []*Item, queueName string, client *Client) []*QueueItem
 }
 
 func (q *QueueItem) Confirm() error {
-	_, err := q.client.Confirm(q.queueName, []*QueueItem{q})
-	return err
+	nitems, err := q.client.Confirm(q.queueName, []*QueueItem{q})
+	if err != nil {
+		return err
+	} else if nitems != 1 {
+		return fmt.Errorf("Confirmation of item failed; nitems = %d", nitems)
+	} else {
+		return nil
+	}
 }
 
 func (q *QueueItem) Abort() error {
-	_, err := q.client.Abort(q.queueName, []*QueueItem{q})
-	return err
+	nitems, err := q.client.Abort(q.queueName, []*QueueItem{q})
+	if err != nil {
+		return err
+	} else if nitems != 1 {
+		return fmt.Errorf("Aborting item failed; nitems = %d", nitems)
+	} else {
+		return nil
+	}
 }

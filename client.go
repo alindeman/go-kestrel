@@ -9,6 +9,7 @@ import (
 type Client struct {
 	Timeout           time.Duration
 	CommandsPerServer int
+	Retries           int
 
 	servers                     []string
 	serverIndex                 int
@@ -23,13 +24,25 @@ func NewClient(servers ...string) *Client {
 		// defaults
 		Timeout:           3 * time.Second,
 		CommandsPerServer: 10000,
+		Retries:           3,
 
 		servers:     servers,
 		serverIndex: len(servers) - 1,
 	}
 }
 
-func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*kthrift.Item, error) {
+func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) (items []*kthrift.Item, err error) {
+	for i := 0; i <= c.Retries; i++ {
+		items, err = c.get(queueName, maxItems, timeout, autoAbort)
+		if err == nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*kthrift.Item, error) {
 	err := c.connectToNextServerIfNeeded()
 	if err != nil {
 		return nil, err
@@ -38,7 +51,18 @@ func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, au
 	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
 }
 
-func (c *Client) Put(queueName string, items ...[]byte) (int32, error) {
+func (c *Client) Put(queueName string, items ...[]byte) (nitems int32, err error) {
+	for i := 0; i <= c.Retries; i++ {
+		nitems, err = c.put(queueName, items...)
+		if err == nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (c *Client) put(queueName string, items ...[]byte) (int32, error) {
 	err := c.connectToNextServerIfNeeded()
 	if err != nil {
 		return 0, err
@@ -57,7 +81,7 @@ func (c *Client) connectToNextServer() error {
 
 	transport, err := thrift.NewTSocketTimeout(c.servers[c.serverIndex], c.Timeout)
 	if err == nil {
-		err := transport.Open()
+		err = transport.Open()
 		if err == nil {
 			c.ttransport = thrift.NewTFramedTransport(transport)
 			c.tclient = kthrift.NewKestrelClientFactory(c.ttransport, thrift.NewTBinaryProtocolFactoryDefault())

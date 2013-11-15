@@ -82,6 +82,15 @@ func (c *Client) Confirm(queueName string, items []*kthrift.Item) (int32, error)
 	return c.tclient.Confirm(queueName, ids)
 }
 
+func (c *Client) Abort(queueName string, items []*kthrift.Item) (int32, error) {
+	ids := make(map[int64]bool, len(items))
+	for _, item := range items {
+		ids[item.Id] = true
+	}
+
+	return c.tclient.Abort(queueName, ids)
+}
+
 func (c *Client) FlushAllQueues() error {
 	err := c.connectToNextServerIfNeeded()
 	if err != nil {

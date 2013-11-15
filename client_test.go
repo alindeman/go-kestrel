@@ -86,3 +86,29 @@ func TestConfirm(t *testing.T) {
 		t.Fatalf("Fetched an item even after confirming it: %v", items[0])
 	}
 }
+
+func TestAbort(t *testing.T) {
+	client := NewClient(kestrelTestServer)
+	client.FlushAllQueues()
+
+	items := [][]byte{[]byte("Hello World")}
+	_, err := client.Put("queue1", items)
+	if err != nil {
+		t.Fatalf("Error occured putting an item onto the queue: %v", err)
+	}
+
+	gitems, err := client.Get("queue1", 1, 0, 1*time.Minute)
+	if err != nil {
+		t.Fatalf("Error occured getting an item from the queue: %v", err)
+	}
+
+	_, err = client.Abort("queue1", gitems)
+	if err != nil {
+		t.Fatalf("Error occured while confirming an item: %v", err)
+	}
+
+	gitems, err = client.Get("queue1", 1, 0, 1*time.Minute)
+	if len(gitems) < 1 {
+		t.Fatalf("Was not able to fetch an item even after aborting it", items[0])
+	}
+}

@@ -7,13 +7,13 @@ import (
 )
 
 type Client struct {
-	Timeout           time.Duration
-	CommandsPerServer int
-	Retries           int
+	Timeout                  time.Duration
+	QueueOperationsPerServer int
+	Retries                  int
 
-	servers                     []string
-	serverIndex                 int
-	commandsSentToCurrentServer int
+	servers                       []string
+	serverIndex                   int
+	operationsSentToCurrentServer int
 
 	tclient    *kthrift.KestrelClient
 	ttransport *thrift.TFramedTransport
@@ -22,9 +22,9 @@ type Client struct {
 func NewClient(servers ...string) *Client {
 	return &Client{
 		// defaults
-		Timeout:           3 * time.Second,
-		CommandsPerServer: 10000,
-		Retries:           3,
+		Timeout:                  3 * time.Second,
+		QueueOperationsPerServer: 10000,
+		Retries:                  3,
 
 		servers:     servers,
 		serverIndex: len(servers) - 1,
@@ -48,7 +48,7 @@ func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, au
 		return nil, err
 	}
 
-	c.commandsSentToCurrentServer += 1
+	c.operationsSentToCurrentServer += 1
 	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
 }
 
@@ -69,7 +69,7 @@ func (c *Client) put(queueName string, items [][]byte) (int32, error) {
 		return 0, err
 	}
 
-	c.commandsSentToCurrentServer += 1
+	c.operationsSentToCurrentServer += 1
 	return c.tclient.Put(queueName, items, 0)
 }
 
@@ -114,7 +114,7 @@ func (c *Client) connectToNextServer() error {
 		if err == nil {
 			c.ttransport = thrift.NewTFramedTransport(transport)
 			c.tclient = kthrift.NewKestrelClientFactory(c.ttransport, thrift.NewTBinaryProtocolFactoryDefault())
-			c.commandsSentToCurrentServer = 0
+			c.operationsSentToCurrentServer = 0
 			return nil
 		} else {
 			return err
@@ -125,7 +125,7 @@ func (c *Client) connectToNextServer() error {
 }
 
 func (c *Client) connectToNextServerIfNeeded() error {
-	if c.tclient == nil || c.commandsSentToCurrentServer >= c.CommandsPerServer {
+	if c.tclient == nil || c.operationsSentToCurrentServer >= c.QueueOperationsPerServer {
 		return c.connectToNextServer()
 	} else {
 		return nil

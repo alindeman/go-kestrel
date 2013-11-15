@@ -6,73 +6,46 @@ import (
 )
 
 type Client struct {
-	Timeout                  time.Duration
-	QueueOperationsPerServer int
-	Retries                  int
-
-	servers                       []string
-	serverIndex                   int
-	operationsSentToCurrentServer int
-
+	Timeout    time.Duration
+	server     string
 	tclient    *KestrelClient
 	ttransport *thrift.TFramedTransport
 }
 
-func NewClient(servers ...string) *Client {
+func NewClient(server string) *Client {
 	return &Client{
-		// defaults
-		Timeout:                  3 * time.Second,
-		QueueOperationsPerServer: 10000,
-		Retries:                  3,
-
-		servers:     servers,
-		serverIndex: len(servers) - 1,
+		Timeout: 3 * time.Second,
+		server:  server,
 	}
 }
 
-func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) (items []*Item, err error) {
-	for i := 0; i <= c.Retries; i++ {
-		items, err = c.get(queueName, maxItems, timeout, autoAbort)
-		if err == nil {
-			return
-		}
-	}
-
-	return
-}
-
-func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*Item, error) {
-	err := c.connectToNextServerIfNeeded()
+func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*Item, error) {
+	err := c.ensureConnected()
 	if err != nil {
+		c.Close()
 		return nil, err
 	}
 
-	c.operationsSentToCurrentServer += 1
 	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
 }
 
-func (c *Client) Put(queueName string, items [][]byte) (nitems int32, err error) {
-	for i := 0; i <= c.Retries; i++ {
-		nitems, err = c.put(queueName, items)
-		if err == nil {
-			return
-		}
-	}
-
-	return
-}
-
-func (c *Client) put(queueName string, items [][]byte) (int32, error) {
-	err := c.connectToNextServerIfNeeded()
+func (c *Client) Put(queueName string, items [][]byte) (int32, error) {
+	err := c.ensureConnected()
 	if err != nil {
+		c.Close()
 		return 0, err
 	}
 
-	c.operationsSentToCurrentServer += 1
 	return c.tclient.Put(queueName, items, 0)
 }
 
 func (c *Client) Confirm(queueName string, items []*Item) (int32, error) {
+	err := c.ensureConnected()
+	if err != nil {
+		c.Close()
+		return 0, err
+	}
+
 	ids := make(map[int64]bool, len(items))
 	for _, item := range items {
 		ids[item.Id] = true
@@ -82,6 +55,12 @@ func (c *Client) Confirm(queueName string, items []*Item) (int32, error) {
 }
 
 func (c *Client) Abort(queueName string, items []*Item) (int32, error) {
+	err := c.ensureConnected()
+	if err != nil {
+		c.Close()
+		return 0, err
+	}
+
 	ids := make(map[int64]bool, len(items))
 	for _, item := range items {
 		ids[item.Id] = true
@@ -91,8 +70,9 @@ func (c *Client) Abort(queueName string, items []*Item) (int32, error) {
 }
 
 func (c *Client) FlushAllQueues() error {
-	err := c.connectToNextServerIfNeeded()
+	err := c.ensureConnected()
 	if err != nil {
+		c.Close()
 		return err
 	}
 
@@ -106,30 +86,22 @@ func (c *Client) Close() {
 	c.ttransport = nil
 }
 
-func (c *Client) connectToNextServer() error {
-	c.Close()
+func (c *Client) ensureConnected() error {
+	if c.ttransport != nil {
+		return nil
+	}
 
-	c.serverIndex = (c.serverIndex + 1) % len(c.servers)
-	transport, err := thrift.NewTSocketTimeout(c.servers[c.serverIndex], c.Timeout)
+	transport, err := thrift.NewTSocketTimeout(c.server, c.Timeout)
 	if err == nil {
 		err = transport.Open()
 		if err == nil {
 			c.ttransport = thrift.NewTFramedTransport(transport)
 			c.tclient = NewKestrelClientFactory(c.ttransport, thrift.NewTBinaryProtocolFactoryDefault())
-			c.operationsSentToCurrentServer = 0
 			return nil
 		} else {
 			return err
 		}
 	} else {
 		return err
-	}
-}
-
-func (c *Client) connectToNextServerIfNeeded() error {
-	if c.tclient == nil || c.operationsSentToCurrentServer >= c.QueueOperationsPerServer {
-		return c.connectToNextServer()
-	} else {
-		return nil
 	}
 }

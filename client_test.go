@@ -34,33 +34,6 @@ func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 	}
 }
 
-func TestRetryWithSuccess(t *testing.T) {
-	client := NewClient("bogusserver:1", kestrelTestServer)
-
-	items := [][]byte{[]byte("Hello World")}
-	nitems, err := client.Put("queue1", items)
-	if err != nil {
-		t.Fatalf("Error occured putting an item onto the queue: %v", err)
-	}
-	if nitems != 1 {
-		t.Fatalf("Did not write 1 item to the queue")
-	}
-}
-
-func TestRetryWithFailure(t *testing.T) {
-	client := NewClient("bogusserver:1", "bogusserver:1", kestrelTestServer)
-	client.Retries = 1
-
-	item := [][]byte{[]byte("Hello World")}
-	nitems, err := client.Put("queue1", item)
-	if err == nil {
-		t.Fatalf("No error occurred even though we should have run out of retries")
-	}
-	if nitems != 0 {
-		t.Fatalf("Wrote an item even though an error occurred")
-	}
-}
-
 func TestConfirm(t *testing.T) {
 	client := NewClient(kestrelTestServer)
 	client.FlushAllQueues()

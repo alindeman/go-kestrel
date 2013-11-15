@@ -19,14 +19,18 @@ func NewClient(server string) *Client {
 	}
 }
 
-func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*Item, error) {
+func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*QueueItem, error) {
 	err := c.ensureConnected()
 	if err != nil {
 		c.Close()
 		return nil, err
 	}
 
-	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
+	items, err := c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
+	if err != nil {
+		c.Close()
+	}
+	return NewQueueItems(items, queueName, c), err
 }
 
 func (c *Client) Put(queueName string, items [][]byte) (int32, error) {
@@ -36,10 +40,14 @@ func (c *Client) Put(queueName string, items [][]byte) (int32, error) {
 		return 0, err
 	}
 
-	return c.tclient.Put(queueName, items, 0)
+	nitems, err := c.tclient.Put(queueName, items, 0)
+	if err != nil {
+		c.Close()
+	}
+	return nitems, err
 }
 
-func (c *Client) Confirm(queueName string, items []*Item) (int32, error) {
+func (c *Client) Confirm(queueName string, items []*QueueItem) (int32, error) {
 	err := c.ensureConnected()
 	if err != nil {
 		c.Close()
@@ -51,10 +59,14 @@ func (c *Client) Confirm(queueName string, items []*Item) (int32, error) {
 		ids[item.Id] = true
 	}
 
-	return c.tclient.Confirm(queueName, ids)
+	nitems, err := c.tclient.Confirm(queueName, ids)
+	if err != nil {
+		c.Close()
+	}
+	return nitems, err
 }
 
-func (c *Client) Abort(queueName string, items []*Item) (int32, error) {
+func (c *Client) Abort(queueName string, items []*QueueItem) (int32, error) {
 	err := c.ensureConnected()
 	if err != nil {
 		c.Close()
@@ -66,7 +78,11 @@ func (c *Client) Abort(queueName string, items []*Item) (int32, error) {
 		ids[item.Id] = true
 	}
 
-	return c.tclient.Abort(queueName, ids)
+	nitems, err := c.tclient.Abort(queueName, ids)
+	if err != nil {
+		c.Close()
+	}
+	return nitems, err
 }
 
 func (c *Client) FlushAllQueues() error {

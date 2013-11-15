@@ -100,14 +100,17 @@ func (c *Client) FlushAllQueues() error {
 	return c.tclient.FlushAllQueues()
 }
 
-func (c *Client) connectToNextServer() error {
-	c.serverIndex = (c.serverIndex + 1) % len(c.servers)
-
+func (c *Client) Close() {
 	if c.ttransport != nil {
 		c.ttransport.Close()
 	}
 	c.ttransport = nil
+}
 
+func (c *Client) connectToNextServer() error {
+	c.Close()
+
+	c.serverIndex = (c.serverIndex + 1) % len(c.servers)
 	transport, err := thrift.NewTSocketTimeout(c.servers[c.serverIndex], c.Timeout)
 	if err == nil {
 		err = transport.Open()

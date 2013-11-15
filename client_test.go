@@ -12,8 +12,8 @@ func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 	client := NewClient(kestrelTestServer)
 	client.FlushAllQueues()
 
-	item := []byte("Hello World")
-	nitems, err := client.Put("queue1", item)
+	items := [][]byte{[]byte("Hello World")}
+	nitems, err := client.Put("queue1", items)
 	if err != nil {
 		t.Fatalf("Error occured putting an item onto the queue: %v", err)
 	}
@@ -21,15 +21,15 @@ func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 		t.Fatalf("Did not write 1 item to the queue")
 	}
 
-	items, err := client.Get("queue1", 1, 0, 0)
+	gitems, err := client.Get("queue1", 1, 0, 0)
 	if err != nil {
 		t.Fatalf("Error occured getting an item from the queue: %v", err)
 	}
 
-	if len(items) != 1 {
+	if len(gitems) != 1 {
 		t.Fatalf("Did not receive one and only one item from the queue")
 	}
-	if !bytes.Equal(item, items[0].Data) {
+	if !bytes.Equal(items[0], gitems[0].Data) {
 		t.Fatalf("Byte sequence differed from expected: %v", items[0])
 	}
 }
@@ -37,8 +37,8 @@ func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 func TestRetryWithSuccess(t *testing.T) {
 	client := NewClient("bogusserver:1", kestrelTestServer)
 
-	item := []byte("Hello World")
-	nitems, err := client.Put("queue1", item)
+	items := [][]byte{[]byte("Hello World")}
+	nitems, err := client.Put("queue1", items)
 	if err != nil {
 		t.Fatalf("Error occured putting an item onto the queue: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestRetryWithFailure(t *testing.T) {
 	client := NewClient("bogusserver:1", "bogusserver:1", kestrelTestServer)
 	client.Retries = 1
 
-	item := []byte("Hello World")
+	item := [][]byte{[]byte("Hello World")}
 	nitems, err := client.Put("queue1", item)
 	if err == nil {
 		t.Fatalf("No error occurred even though we should have run out of retries")
@@ -65,24 +65,24 @@ func TestConfirm(t *testing.T) {
 	client := NewClient(kestrelTestServer)
 	client.FlushAllQueues()
 
-	item := []byte("Hello World")
-	_, err := client.Put("queue1", item)
+	items := [][]byte{[]byte("Hello World")}
+	_, err := client.Put("queue1", items)
 	if err != nil {
 		t.Fatalf("Error occured putting an item onto the queue: %v", err)
 	}
 
-	items, err := client.Get("queue1", 1, 0, 1*time.Minute)
+	gitems, err := client.Get("queue1", 1, 0, 1*time.Minute)
 	if err != nil {
 		t.Fatalf("Error occured getting an item from the queue: %v", err)
 	}
 
-	_, err = client.Confirm("queue1", items[0])
+	_, err = client.Confirm("queue1", gitems)
 	if err != nil {
 		t.Fatalf("Error occured while confirming an item: %v", err)
 	}
 
-	items, err = client.Get("queue1", 1, 0, 1*time.Minute)
-	if len(items) > 0 {
+	gitems, err = client.Get("queue1", 1, 0, 1*time.Minute)
+	if len(gitems) > 0 {
 		t.Fatalf("Fetched an item even after confirming it: %v", items[0])
 	}
 }

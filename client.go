@@ -52,9 +52,9 @@ func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, au
 	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
 }
 
-func (c *Client) Put(queueName string, items ...[]byte) (nitems int32, err error) {
+func (c *Client) Put(queueName string, items [][]byte) (nitems int32, err error) {
 	for i := 0; i <= c.Retries; i++ {
-		nitems, err = c.put(queueName, items...)
+		nitems, err = c.put(queueName, items)
 		if err == nil {
 			return
 		}
@@ -63,7 +63,7 @@ func (c *Client) Put(queueName string, items ...[]byte) (nitems int32, err error
 	return
 }
 
-func (c *Client) put(queueName string, items ...[]byte) (int32, error) {
+func (c *Client) put(queueName string, items [][]byte) (int32, error) {
 	err := c.connectToNextServerIfNeeded()
 	if err != nil {
 		return 0, err
@@ -73,7 +73,7 @@ func (c *Client) put(queueName string, items ...[]byte) (int32, error) {
 	return c.tclient.Put(queueName, items, 0)
 }
 
-func (c *Client) Confirm(queueName string, items ...*kthrift.Item) (int32, error) {
+func (c *Client) Confirm(queueName string, items []*kthrift.Item) (int32, error) {
 	ids := make(map[int64]bool, len(items))
 	for _, item := range items {
 		ids[item.Id] = true

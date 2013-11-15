@@ -3,19 +3,21 @@ package kestrel
 import (
 	"bytes"
 	"testing"
+	"time"
 )
 
 const kestrelTestServer = "localhost:2229"
 
 func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 	client := NewClient(kestrelTestServer)
+	client.FlushAllQueues()
 
 	item := []byte("Hello World")
-	nItems, err := client.Put("queue1", item)
+	nitems, err := client.Put("queue1", item)
 	if err != nil {
 		t.Fatalf("Error occured putting an item onto the queue: %v", err)
 	}
-	if nItems != 1 {
+	if nitems != 1 {
 		t.Fatalf("Did not write 1 item to the queue")
 	}
 
@@ -36,11 +38,11 @@ func TestRetryWithSuccess(t *testing.T) {
 	client := NewClient("bogusserver:1", kestrelTestServer)
 
 	item := []byte("Hello World")
-	nItems, err := client.Put("queue1", item)
+	nitems, err := client.Put("queue1", item)
 	if err != nil {
 		t.Fatalf("Error occured putting an item onto the queue: %v", err)
 	}
-	if nItems != 1 {
+	if nitems != 1 {
 		t.Fatalf("Did not write 1 item to the queue")
 	}
 }
@@ -50,11 +52,37 @@ func TestRetryWithFailure(t *testing.T) {
 	client.Retries = 1
 
 	item := []byte("Hello World")
-	nItems, err := client.Put("queue1", item)
+	nitems, err := client.Put("queue1", item)
 	if err == nil {
 		t.Fatalf("No error occurred even though we should have run out of retries")
 	}
-	if nItems != 0 {
+	if nitems != 0 {
 		t.Fatalf("Wrote an item even though an error occurred")
+	}
+}
+
+func TestConfirm(t *testing.T) {
+	client := NewClient(kestrelTestServer)
+	client.FlushAllQueues()
+
+	item := []byte("Hello World")
+	_, err := client.Put("queue1", item)
+	if err != nil {
+		t.Fatalf("Error occured putting an item onto the queue: %v", err)
+	}
+
+	items, err := client.Get("queue1", 1, 0, 1*time.Minute)
+	if err != nil {
+		t.Fatalf("Error occured getting an item from the queue: %v", err)
+	}
+
+	_, err = client.Confirm("queue1", items[0])
+	if err != nil {
+		t.Fatalf("Error occured while confirming an item: %v", err)
+	}
+
+	items, err = client.Get("queue1", 1, 0, 1*time.Minute)
+	if len(items) > 0 {
+		t.Fatalf("Fetched an item even after confirming it: %v", items[0])
 	}
 }

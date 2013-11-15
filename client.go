@@ -48,6 +48,7 @@ func (c *Client) get(queueName string, maxItems int32, timeout time.Duration, au
 		return nil, err
 	}
 
+	c.commandsSentToCurrentServer += 1
 	return c.tclient.Get(queueName, maxItems, int32(timeout/time.Millisecond), int32(autoAbort/time.Millisecond))
 }
 
@@ -68,7 +69,26 @@ func (c *Client) put(queueName string, items ...[]byte) (int32, error) {
 		return 0, err
 	}
 
+	c.commandsSentToCurrentServer += 1
 	return c.tclient.Put(queueName, items, 0)
+}
+
+func (c *Client) Confirm(queueName string, items ...*kthrift.Item) (int32, error) {
+	ids := make(map[int64]bool, len(items))
+	for _, item := range items {
+		ids[item.Id] = true
+	}
+
+	return c.tclient.Confirm(queueName, ids)
+}
+
+func (c *Client) FlushAllQueues() error {
+	err := c.connectToNextServerIfNeeded()
+	if err != nil {
+		return err
+	}
+
+	return c.tclient.FlushAllQueues()
 }
 
 func (c *Client) connectToNextServer() error {

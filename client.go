@@ -97,11 +97,23 @@ func (c *Client) FlushAllQueues() error {
 	return c.tclient.FlushAllQueues()
 }
 
-func (c *Client) Close() {
+func (c *Client) DeleteQueue(queueName string) error {
+	err := c.ensureConnected()
+	if err != nil {
+		c.Close()
+		return err
+	}
+
+	return c.tclient.DeleteQueue(queueName)
+}
+
+func (c *Client) Close() error {
 	if c.ttransport != nil {
 		c.ttransport.Close()
 	}
 	c.ttransport = nil
+
+	return nil
 }
 
 func (c *Client) ensureConnected() error {

@@ -57,5 +57,7 @@ func (r *ClusterReader) ReadIntoChannel(queueName string, ch chan<- *QueueItem) 
 }
 
 func (r *ClusterReader) Close() {
-	close(r.closed)
+	if r.closed != nil {
+		close(r.closed)
+	}
 }

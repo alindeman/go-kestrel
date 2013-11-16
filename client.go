@@ -1,6 +1,7 @@
 package kestrel
 
 import (
+	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"time"
 )
@@ -12,9 +13,9 @@ type Client struct {
 	ttransport *thrift.TFramedTransport
 }
 
-func NewClient(server string) *Client {
+func NewClient(host string, port int) *Client {
 	return &Client{
-		server: server,
+		server: fmt.Sprintf("%s:%d", host, port),
 
 		// defaults
 		Timeout: 3 * time.Second,

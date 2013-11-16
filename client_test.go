@@ -6,10 +6,11 @@ import (
 	"time"
 )
 
-const kestrelTestServer = "localhost:2229"
+const kestrelTestHost = "localhost"
+const kestrelThriftPort = 2229
 
 func TestPeek(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}
@@ -28,7 +29,7 @@ func TestPeek(t *testing.T) {
 }
 
 func TestSimplePutAndGetToAndFromServer(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}
@@ -54,7 +55,7 @@ func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 }
 
 func TestConfirm(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}
@@ -80,7 +81,7 @@ func TestConfirm(t *testing.T) {
 }
 
 func TestAbort(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}
@@ -106,7 +107,7 @@ func TestAbort(t *testing.T) {
 }
 
 func TestConfirmAfterDisconnect(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}
@@ -134,7 +135,7 @@ func TestConfirmAfterDisconnect(t *testing.T) {
 }
 
 func TestConfirmAfterTimeout(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	items := [][]byte{[]byte("Hello World")}

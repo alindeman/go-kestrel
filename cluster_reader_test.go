@@ -6,7 +6,7 @@ import (
 )
 
 func TestReadIntoChannel(t *testing.T) {
-	client := NewClient(kestrelTestServer)
+	client := NewClient(kestrelTestHost, kestrelThriftPort)
 	client.FlushAllQueues()
 
 	reader := NewClusterReader([]*Client{client})

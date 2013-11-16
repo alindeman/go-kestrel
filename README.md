@@ -15,7 +15,7 @@ import (
 )
 
 // assuming the thrift port is 2229
-client := kestrel.NewClient("localhost:2229")
+client := kestrel.NewClient("localhost", 2229)
 
 item := []byte("Hello World")
 nitems, err := client.Put("queue1", [][]byte{item})
@@ -33,9 +33,9 @@ import (
 
 // assuming the thrift port is 2229
 clients := []*kestrel.Client{
-  kestrel.NewClient("host1:2229"),
-  kestrel.NewClient("host2:2229"),
-  kestrel.NewClient("host3:2229"),
+  kestrel.NewClient("host1", 2229),
+  kestrel.NewClient("host2", 2229),
+  kestrel.NewClient("host3", 2229),
 }
 cluster := kestrel.NewClusterReader(clients)
 

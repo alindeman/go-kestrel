@@ -33,6 +33,8 @@ func (r *ClusterReader) ReadIntoChannel(queueName string, ch chan<- *QueueItem) 
 
 		go func(client *Client, queueName string, ch chan<- *QueueItem, closed chan struct{}) {
 			defer r.wg.Done()
+			defer client.Close()
+
 			for {
 				items, err := client.Get(queueName, 1, r.GetTimeout, r.AbortTimeout)
 				if err != nil || len(items) == 0 {
@@ -56,8 +58,10 @@ func (r *ClusterReader) ReadIntoChannel(queueName string, ch chan<- *QueueItem) 
 	r.wg.Wait()
 }
 
-func (r *ClusterReader) Close() {
+func (r *ClusterReader) Close() error {
 	if r.closed != nil {
 		close(r.closed)
 	}
+
+	return nil
 }

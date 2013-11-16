@@ -8,6 +8,25 @@ import (
 
 const kestrelTestServer = "localhost:2229"
 
+func TestPeek(t *testing.T) {
+	client := NewClient(kestrelTestServer)
+	client.FlushAllQueues()
+
+	items := [][]byte{[]byte("Hello World")}
+	_, err := client.Put("queue1", items)
+	if err != nil {
+		t.Fatalf("Error occured putting an item onto the queue: %v", err)
+	}
+
+	info, err := client.Peek("queue1")
+	if err != nil {
+		t.Fatalf("Error occured while peeking at a queue: %v", err)
+	}
+	if info.Items != 1 {
+		t.Fatalf("Expected 1 item in the queue, got %d", info.Items)
+	}
+}
+
 func TestSimplePutAndGetToAndFromServer(t *testing.T) {
 	client := NewClient(kestrelTestServer)
 	client.FlushAllQueues()

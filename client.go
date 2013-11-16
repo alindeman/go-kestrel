@@ -21,6 +21,16 @@ func NewClient(server string) *Client {
 	}
 }
 
+func (c *Client) Peek(queueName string) (*QueueInfo, error) {
+	err := c.ensureConnected()
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	return c.tclient.Peek(queueName)
+}
+
 func (c *Client) Get(queueName string, maxItems int32, timeout time.Duration, autoAbort time.Duration) ([]*QueueItem, error) {
 	err := c.ensureConnected()
 	if err != nil {

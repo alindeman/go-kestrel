@@ -14,8 +14,10 @@ type Client struct {
 
 func NewClient(server string) *Client {
 	return &Client{
+		server: server,
+
+		// defaults
 		Timeout: 3 * time.Second,
-		server:  server,
 	}
 }
 
